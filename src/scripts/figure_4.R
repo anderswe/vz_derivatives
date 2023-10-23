@@ -61,8 +61,8 @@ dev.off()
 
 
 fp_genes <- genes %>% .[. %in% rownames(so)] %>% c(., "FOXP2", "FOXP1", "SORCS3", "NXPH1") %>% sort()
-pdf("out/featureplot_cs20s.pdf", h = 84, w = 20)
-FeaturePlot(so, fp_genes, order = F, cols = c("lightgrey", "red"), raster = T) & NoAxes() & NoLegend()
+pdf("out/featureplot_cs20s.pdf", h = 110, w = 25)
+FeaturePlot(so, fp_genes, order = F, raster = T, ncol = 5) & NoAxes() & NoLegend()
 dev.off()
 
 
@@ -89,6 +89,24 @@ pdf("out/annotation_dimplots_cs20s.pdf", h = 4, w = 12)
 dp_annot | dp3 | dp4
 dev.off()
 
+# PC subset
+ss <- so %>% subset(subset = celltype_fine %in% c("PC (SKOR2+)", "PC (ESRRB+)", "PC (PCP4+)", "PC (GRIN2A+)")) %>% 
+    FindNeighbors(dims = 1:20, reduction = "pca", verbose = T) %>%
+    RunUMAP(dims = 1:20, reduction = "pca") %>% 
+    FindClusters(resolution = 0.2, verbose = T)
+
+pdf("out/featureplot_cs20s_pc_subset.pdf", h = 110, w = 25)
+FeaturePlot(ss, fp_genes, order = F, raster = T, ncol = 5) & NoAxes() & NoLegend()
+dev.off()
+
+dp1 <- DimPlot(ss, group.by = "celltype_fine", label = T, repel = T, raster = T) & NoAxes()
+dp2 <- DimPlot(ss, group.by = "seurat_clusters", label = T, repel = T, raster = T) & NoAxes()
+pdf("out/dimplot_cs20s_pc_subset.pdf", h = 5, w = 10)
+dp1 | dp2
+dev.off()
+
+mks_3 <- FindMarkers(ss, ident.1 = "3", only.pos = TRUE)
+
 # markers
 # future::plan("sequential")
 # Idents(so) <- so$celltype_fine
@@ -104,6 +122,8 @@ so@meta.data %<>% dplyr::mutate(celltype_broad = dplyr::case_when(
   grepl("SKOR2|PRDM13", celltype_fine) ~ "Early PC",
   grepl("VZ|NE", celltype_fine) ~ "NE & VZ",
 ))
+
+qs::qsave(so, "out/cs20s_annot.qs")
 
 dp_annot_broad <- DimPlot(so, group.by = "celltype_broad", cols = tableau10) + NoAxes() + ggtitle("") + NoLegend() #label = T, repel = T, label.size = 3
 dp_annot_broad2 <- DimPlot(so, group.by = "celltype_broad", cols = tableau10, label = T, repel = T, label.size = 3) + NoAxes() + ggtitle("") + NoLegend()
