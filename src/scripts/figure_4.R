@@ -60,7 +60,7 @@ pdf("out/dimplot_cs20s.pdf", h = 20, w = 6)
 dev.off()
 
 
-fp_genes <- genes %>% .[. %in% rownames(so)] %>% c(., "FOXP2", "FOXP1", "SORCS3", "NXPH1") %>% sort()
+fp_genes <- genes %>% .[. %in% rownames(so)] %>% c(., "FOXP2", "FOXP1", "SORCS3", "NXPH1", "NES", "OPCML") %>% sort()
 pdf("out/featureplot_cs20s.pdf", h = 110, w = 25)
 FeaturePlot(so, fp_genes, order = F, raster = T, ncol = 5) & NoAxes() & NoLegend()
 dev.off()
@@ -91,9 +91,15 @@ dev.off()
 
 # PC subset
 ss <- so %>% subset(subset = celltype_fine %in% c("PC (SKOR2+)", "PC (ESRRB+)", "PC (PCP4+)", "PC (GRIN2A+)")) %>% 
-    FindNeighbors(dims = 1:20, reduction = "pca", verbose = T) %>%
-    RunUMAP(dims = 1:20, reduction = "pca") %>% 
-    FindClusters(resolution = 0.2, verbose = T)
+  SCTransform(vars.to.regress = "percent.mt") %>% 
+  RunPCA() %>% 
+  harmony::RunHarmony(group.by.vars = "orig.ident",
+             reduction = "pca",
+             assay.use = "RNA",
+             theta = 2) %>%
+  FindNeighbors(dims = 1:20, reduction = "harmony", verbose = T) %>%
+  RunUMAP(dims = 1:20, reduction = "harmony") %>% 
+  FindClusters(resolution = 0.2, verbose = T)
 
 pdf("out/featureplot_cs20s_pc_subset.pdf", h = 110, w = 25)
 FeaturePlot(ss, fp_genes, order = F, raster = T, ncol = 5) & NoAxes() & NoLegend()
@@ -101,11 +107,45 @@ dev.off()
 
 dp1 <- DimPlot(ss, group.by = "celltype_fine", label = T, repel = T, raster = T) & NoAxes()
 dp2 <- DimPlot(ss, group.by = "seurat_clusters", label = T, repel = T, raster = T) & NoAxes()
-pdf("out/dimplot_cs20s_pc_subset.pdf", h = 5, w = 10)
-dp1 | dp2
+dp3 <- DimPlot(ss, group.by = "orig.ident", label = T, repel = T, raster = T) & NoAxes()
+pdf("out/dimplot_cs20s_pc_subset.pdf", h = 5, w = 15)
+dp1 | dp2 | dp3
 dev.off()
 
-mks_3 <- FindMarkers(ss, ident.1 = "3", only.pos = TRUE)
+mks_5 <- FindMarkers(ss, ident.1 = "5", only.pos = TRUE)
+mks_4 <- FindMarkers(ss, ident.1 = "4", only.pos = TRUE)
+
+head(mks_5, 20)
+pdf("out/cs20s_markers_4.pdf", w = 20, h = 25)
+FeaturePlot(so, features = rownames(mks_4)[1:20], raster = T) & NoAxes() & NoLegend()
+dev.off()
+pdf("out/cs20s_markers_5.pdf", w = 20, h = 25)
+FeaturePlot(so, features = rownames(mks_5)[1:20], raster = T) & NoAxes() & NoLegend()
+dev.off()
+pdf("out/cs20s_pc_subset_markers_4.pdf", w = 20, h = 25)
+FeaturePlot(ss, features = rownames(mks_4)[1:20], raster = T) & NoAxes() & NoLegend()
+dev.off()
+pdf("out/cs20s_pc_subset_markers_5.pdf", w = 20, h = 25)
+FeaturePlot(ss, features = rownames(mks_5)[1:20], raster = T) & NoAxes() & NoLegend()
+dev.off()
+
+# recluster with harmony
+hmny <- so %>% 
+  harmony::RunHarmony(group.by.vars = "orig.ident",
+             reduction = "pca",
+             assay.use = "RNA",
+             theta = 2) %>%
+  FindNeighbors(dims = 1:20, reduction = "harmony", verbose = T) %>%
+  RunUMAP(dims = 1:20, reduction = "harmony", spread = 1.2, min.dist = 0.2) %>% 
+  FindClusters(resolution = 0.5, verbose = T)
+
+pdf("out/dim_cs20s_hmny.pdf", h = 5, w = 15)
+DimPlot(hmny, group.by = c("seurat_clusters", "celltype_fine", "orig.ident"), raster = T, ncol = 3) & NoAxes() & NoLegend()
+dev.off()
+
+pdf("out/featureplot_cs20s_hmny.pdf", h = 110, w = 25)
+FeaturePlot(hmny, fp_genes, order = F, raster = T, ncol = 5) & NoAxes() & NoLegend()
+dev.off()
 
 # markers
 # future::plan("sequential")
@@ -162,11 +202,11 @@ dev.off()
 
 
 # panel C (featureplots) --------------------------------------------------
-feats <- c("PTF1A", "PRDM13", "LHX1", "SKOR2", "ESRRB", "PCP4")
+feats <- c("PTF1A", "PRDM13", "LHX1", "SKOR2", "ESRRB", "PCP4", "GRIN2A", "PARD3B", "OPCML")
 DefaultAssay(so) <- "SCT"
 
 # happen to have same scale
-pdf(glue::glue("out/featureplots_{paste(feats, collapse = '_')}_cs20s.pdf"), h = 6, w = 9)
+pdf(glue::glue("out/featureplots_{paste(feats, collapse = '_')}_cs20s.pdf"), h = 9, w = 9)
 FeaturePlot(so, feats, cols = c("cadetblue1", "deeppink3"), order = F, raster = F, ncol = 3, pt.size = 0.4) & NoAxes() & theme(plot.title = element_text(size = 12, face = "bold.italic")) & labs(color = "Expr.\n(SCT)")
 dev.off()
 
@@ -328,6 +368,7 @@ for(i in iters){
 
 }
 
+
 # Bonus (mouse - Linnarsson) -------------------------------------------------------------------
 
 
@@ -418,12 +459,17 @@ so <- readRDS(glue::glue("{yml$ald_path}/cbl_integrated_cleanCC_210111.rds"))
 lin <- qs::qread(glue::glue("{yml$lin_dir}/hb_cb_final_v3.qs"))
 cs20 <- qs::qread("out/cs20s.qs")
 
+# import adult human data
+lake <- qs::qread("src/data/lake_cerebellum.qs")
+sil <- qs::qread(glue::glue("{yml$public_scrnaseq_dir}/siletti_2022_biorxiv/sil_cerebellum.qs"))
+
+
 # feature selection
-feats <- c("MKI67", "PRDM13") #c("SKOR2", "MKI67")
-mmfeats <- c("Mki67", "Prdm13")
+feats <- c("MKI67", "SKOR2") #c("MKI67", "PRDM13") #c("SKOR2", "MKI67")
+mmfeats <- c("Mki67", "Skor2") #c("Mki67", "Prdm13")
 
 # assign groups
-bc_list <- purrr::map(c(so, lin, cs20, mv, mm_lin), \(x){
+bc_list <- purrr::map(c(lake, sil), \(x){ #c(so, lin, cs20, mv, mm_lin, lake, sil)
 
   if("Prdm13" %in% rownames(x@assays$RNA@counts)){ feats_loop <- mmfeats } else { feats_loop <- feats }
 
@@ -435,7 +481,7 @@ bc_list <- purrr::map(c(so, lin, cs20, mv, mm_lin), \(x){
     rownames() %>% 
     return()
 
-}) %>% magrittr::set_names(c("so", "lin", "cs20", "mv", "mm_lin"))
+}) %>% magrittr::set_names(c("lake", "sil")) #c("so", "lin", "cs20", "mv", "mm_lin", "lake", "sil")
 
 
 so@meta.data %<>% dplyr::mutate(feat_status = ifelse(rownames(.) %in% bc_list[["so"]], "double_pos", "not"))
@@ -443,6 +489,33 @@ lin@meta.data %<>% dplyr::mutate(feat_status = ifelse(rownames(.) %in% bc_list[[
 cs20@meta.data %<>% dplyr::mutate(feat_status = ifelse(rownames(.) %in% bc_list[["cs20"]], "double_pos", "not"))
 mv@meta.data %<>% dplyr::mutate(feat_status = ifelse(rownames(.) %in% bc_list[["mv"]], "double_pos", "not"))
 mm_lin@meta.data %<>% dplyr::mutate(feat_status = ifelse(rownames(.) %in% bc_list[["mm_lin"]], "double_pos", "not"))
+lake@meta.data %<>% dplyr::mutate(feat_status = ifelse(rownames(.) %in% bc_list[["lake"]], "double_pos", "not"))
+sil@meta.data %<>% dplyr::mutate(feat_status = ifelse(rownames(.) %in% bc_list[["sil"]], "double_pos", "not"))
+
+# stacked barplots by timepoint
+sbp1 <- ggplot(so@meta.data %>% dplyr::filter(feat_status == "double_pos"), aes(fill = feat_status, x = age)) + geom_bar(position="stack", stat="count") + scale_fill_manual(values = "deeppink3") + theme_classic() + theme(legend.position = "none") + ylab("Num. cells") + xlab("") + ggtitle("Aldinger et al. 2021")
+sbp2 <- ggplot(lin@meta.data %>% dplyr::filter(feat_status == "double_pos"), aes(fill = feat_status, x = Age)) + geom_bar(position="stack", stat="count") + scale_fill_manual(values = "deeppink3") + theme_classic() + theme(legend.position = "none") + ylab("Num. cells") + xlab("") + ggtitle("Braun et al. 2023")
+sbp3 <- ggplot(cs20@meta.data %>% dplyr::filter(feat_status == "double_pos"), aes(fill = feat_status, x = orig.ident)) + geom_bar(position="stack", stat="count") + scale_fill_manual(values = "deeppink3") + theme_classic() + theme(legend.position = "none") + ylab("Num. cells") + xlab("") + ggtitle("This study")
+sbp4 <- ggplot(mv@meta.data %>% dplyr::filter(feat_status == "double_pos"), aes(fill = feat_status, x = Donor)) + geom_bar(position="stack", stat="count") + scale_fill_manual(values = "deeppink3") + theme_classic() + theme(legend.position = "none") + ylab("Num. cells") + xlab("") + ggtitle("Vladoiu et al. 2019")
+sbp5 <- ggplot(mm_lin@meta.data %>% dplyr::filter(feat_status == "double_pos"), aes(fill = feat_status, x = age_day)) + geom_bar(position="stack", stat="count") + scale_fill_manual(values = "deeppink3") + theme_classic() + theme(legend.position = "none") + ylab("Num. cells") + xlab("") + ggtitle("La Manno et al. 2021")
+sbp6 <- ggplot(lake@meta.data %>% dplyr::filter(feat_status == "double_pos"), aes(fill = feat_status, x = age)) + geom_bar(position="stack", stat="count") + scale_fill_manual(values = "deeppink3") + theme_classic() + theme(legend.position = "none") + ylab("Num. cells") + xlab("") + ggtitle("Lake et al. 2017")
+sbp7 <- ggplot(sil@meta.data %>% dplyr::filter(feat_status == "double_pos"), aes(fill = feat_status, x = Age)) + geom_bar(position="stack", stat="count") + scale_fill_manual(values = "deeppink3") + theme_classic() + theme(legend.position = "none") + ylab("Num. cells") + xlab("") + ggtitle("Siletti et al. 2023")
+
+pdf(glue::glue("{fs_out}/stacked_barplots_by_age_{paste(feats, collapse = '_')}.pdf"), h = 15, w = 7)
+sbp3 / sbp1 / sbp2 / sbp4 / sbp5
+dev.off()
+
+pdf(glue::glue("{fs_out}/stacked_barplots_by_age_lake_siletti_{paste(feats, collapse = '_')}.pdf"), h = 6, w = 7)
+sbp6 / sbp7
+dev.off()
+
+# adult featureplots
+pdf(glue::glue("sandbox/lake_skor2_mki67.pdf"), w = 10, h = 5)
+FeaturePlot(lake, c("SKOR2", "MKI67"), order = F, raster = T) & NoAxes()
+dev.off()
+pdf(glue::glue("sandbox/siletti_skor2_mki67.pdf"), w = 10, h = 5)
+FeaturePlot(sil, c("SKOR2", "MKI67"), order = F, raster = T) & NoAxes()
+dev.off()
 
 
 # feature scatterplots

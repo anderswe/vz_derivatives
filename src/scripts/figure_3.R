@@ -14,6 +14,7 @@
 
 # Libraries ---------------------------------------------------------------
 # module load R/4.2.1
+# R
 .libPaths(c("src/envs/r_vz_deriv/renv/library/R-4.2/x86_64-pc-linux-gnu", .libPaths()))
 library(Seurat)
 library(magrittr)
@@ -113,7 +114,7 @@ so@meta.data %<>% dplyr::mutate(celltype_aggr = dplyr::case_when(
 
 # Linnarsson --------------------------------------------------------------
 
-# from Braun 2022 bioRxiv
+# from Braun 2023 Science
 lin <- qs::qread(glue::glue("{yml$lin_dir}/hb_cb_final_v3.qs"))
 lin@meta.data %<>% dplyr::mutate(celltype_aggr = dplyr::case_when(
   seurat_clusters %in% c(1,0,3,15) ~ "PC",
@@ -209,6 +210,7 @@ lake@meta.data %<>% dplyr::mutate(celltype_pc_only = ifelse(celltype_aggr == "PC
 
 
 
+
 # DimPlots (panel N) ----------------------------------------------------------------
 
 # features
@@ -224,31 +226,88 @@ so@meta.data %<>% dplyr::mutate(age_clean = age %>% stringr::str_replace(" PCW",
 lin@meta.data %<>% dplyr::mutate(age_binned = plyr::mapvalues(Age, age_dict$old, age_dict$new, warn_missing = FALSE) %>% factor(levels = age_bins))
 age_pal_new <- colorRampPalette(RColorBrewer::brewer.pal(9, "Spectral"))(length(age_bins)) %>% magrittr::set_names(as.character(age_bins))
 
+# params
+title_size <- 15
+legend_title_size <- 15
+
 # lake
 DefaultAssay(lake) <- "RNA"
-lake_ct <- DimPlot(lake, group.by = "celltype_pc_only", raster = T, cols = c(tableau20[1], "lightgrey"))+NoAxes()+labs(color = "", title = "Lake et al. 2017")+theme(plot.title = element_text(size = 12, face = "bold"))
-lake_age <- DimPlot(lake, group.by = "age", raster = T, cols = RColorBrewer::brewer.pal(11, "BrBG")[c(8,4,2)])+NoAxes()+labs(color = "Years", title = "Age")+theme(plot.title = element_text(size = 12, face = "bold")) #RColorBrewer::brewer.pal(9, "YlOrRd")[c(2,5,7)]
+lake_ct <- DimPlot(lake, group.by = "celltype_pc_only", raster = T, cols = c(tableau20[1], "lightgrey"))+NoAxes()+labs(color = "", title = "Lake et al. 2017")+theme(plot.title = element_text(size = title_size, face = "bold"))
+lake_age <- DimPlot(lake, group.by = "age", raster = T, cols = RColorBrewer::brewer.pal(11, "BrBG")[c(8,4,2)])+NoAxes()+labs(color = "Years", title = "Age")+theme(plot.title = element_text(size = title_size, face = "bold")) #RColorBrewer::brewer.pal(9, "YlOrRd")[c(2,5,7)]
 lake_fps <- FeaturePlot(lake, feats, order = T, raster = T, cols = c("cadetblue1", "deeppink3"), ncol = 1) & NoAxes() & theme( legend.key.size = unit(8, "pt"))
+lake_dot <- DotPlot(lake, features = feats, assay = "RNA", group.by = "celltype_pc_only", cols = c("cadetblue1", "deeppink3")) +
+  geom_point(aes(size=pct.exp), shape = 21, colour="black", stroke=0.5) +
+  guides(size=guide_legend(override.aes=list(shape=21, colour="black", fill="white")))+
+  labs(x="", y="")+
+  # theme(legend.position = "bottom", legend.box = "vertical")+
+  theme(legend.position = "none")+
+  coord_flip()
 
 # aldinger
 DefaultAssay(so) <- "RNA"
-ald_ct <- DimPlot(so, group.by = "celltype_aggr", raster = T, cols = c(tableau20[c(1:2)], "lightgrey"))+NoAxes()+labs(color = "", title = "Aldinger et al. 2021")+theme(plot.title = element_text(size = 12, face = "bold"))
-ald_age <- DimPlot(so, group.by = "age_binned", raster = T, cols = age_pal_new)+NoAxes()+labs(color = "PCW", title = "Age")+theme(plot.title = element_text(size = 12, face = "bold"))+guides(color=guide_legend(ncol=1, override.aes = list(size=2.5)))
+ald_ct <- DimPlot(so, group.by = "celltype_aggr", raster = T, cols = c(tableau20[c(1:2)], "lightgrey"))+NoAxes()+labs(color = "", title = "Aldinger et al. 2021")+theme(plot.title = element_text(size = title_size, face = "bold"))
+ald_age <- DimPlot(so, group.by = "age_binned", raster = T, cols = age_pal_new)+NoAxes()+labs(color = "PCW", title = "Age")+theme(plot.title = element_text(size = title_size, face = "bold"))+guides(color=guide_legend(ncol=1, override.aes = list(size=2.5)))
 ald_fps <- FeaturePlot(so, feats, order = T, raster = T, cols = c("cadetblue1", "deeppink3"), ncol = 1) & NoAxes() & theme(legend.key.size = unit(8, "pt"))
+ald_dot <- DotPlot(so, features = feats, assay = "RNA", group.by = "celltype_aggr", cols = c("cadetblue1", "deeppink3")) +
+  geom_point(aes(size=pct.exp), shape = 21, colour="black", stroke=0.5) +
+  guides(size=guide_legend(override.aes=list(shape=21, colour="black", fill="white")))+
+  labs(x="", y="")+
+  # theme(legend.position = "bottom", legend.box = "vertical")+
+  theme(legend.position = "none")+
+  coord_flip()
 
 # linnarsson
 DefaultAssay(lin) <- "RNA"
-lin_ct <- DimPlot(lin, group.by = "celltype_aggr", raster = T, cols = c(tableau20[c(1:2)], "lightgrey"))+NoAxes()+labs(color = "", title = "Braun et al. 2022")+theme(plot.title = element_text(size = 12, face = "bold"))
-lin_age <- DimPlot(lin, group.by = "age_binned", raster = T, cols = age_pal_new)+NoAxes()+labs(color = "PCW", title = "Age")+theme(plot.title = element_text(size = 12, face = "bold"))
+lin_ct <- DimPlot(lin, group.by = "celltype_aggr", raster = T, cols = c(tableau20[c(1:2)], "lightgrey"))+NoAxes()+labs(color = "", title = "Braun et al. 2022")+theme(plot.title = element_text(size = title_size, face = "bold"))
+lin_age <- DimPlot(lin, group.by = "age_binned", raster = T, cols = age_pal_new)+NoAxes()+labs(color = "PCW", title = "Age")+theme(plot.title = element_text(size = title_size, face = "bold"))
 lin_fps <- FeaturePlot(lin, c(feats), order = T, raster = T, cols = c("cadetblue1", "deeppink3"), ncol = 1) & NoAxes() & theme(legend.key.size = unit(8, "pt"))
+lin_dot <- DotPlot(lin, features = feats, assay = "RNA", group.by = "celltype_aggr", cols = c("cadetblue1", "deeppink3")) +
+  geom_point(aes(size=pct.exp), shape = 21, colour="black", stroke=0.5) +
+  guides(size=guide_legend(override.aes=list(shape=21, colour="black", fill="white")))+
+  labs(x="", y="")+
+  # theme(legend.position = "bottom", legend.box = "vertical")+
+  theme(legend.position = "none")+
+  coord_flip()
+
+
 
 
 # plot all
-pdf(glue::glue("out/fig2_featureplots_{paste(feats, collapse = '_')}.pdf"), h = 15, w = 10)
-(lin_ct / lin_age / lin_fps + patchwork::plot_layout(heights = c(1,1,3))) |
-  (ald_ct / ald_age / ald_fps + patchwork::plot_layout(heights = c(1,1,3))) |
-  (lake_ct / lake_age / lake_fps + patchwork::plot_layout(heights = c(1,1,3)))
+pdf(glue::glue("out/fig3_feature_and_dotplots_{paste(feats, collapse = '_')}.pdf"), h = 10, w = 10)
+(((lin_ct / lin_age) | (ald_ct / ald_age) | (lake_ct / lake_age)) /
+  (lin_dot | ald_dot | lake_dot))+patchwork::plot_layout(heights = c(1, 0.5))
 dev.off()
+
+lake_dot2 <- DotPlot(lake, features = feats, assay = "RNA", group.by = "celltype_pc_only", cols = c("cadetblue1", "deeppink3")) +
+  geom_point(aes(size=pct.exp), shape = 21, colour="black", stroke=0.5) +
+  guides(size=guide_legend(override.aes=list(shape=21, colour="black", fill="white")))+
+  labs(x="", y="")+
+  theme(legend.position = "bottom", legend.box = "vertical")+
+  coord_flip()
+ald_dot2 <- DotPlot(so, features = feats, assay = "RNA", group.by = "celltype_aggr", cols = c("cadetblue1", "deeppink3")) +
+  geom_point(aes(size=pct.exp), shape = 21, colour="black", stroke=0.5) +
+  guides(size=guide_legend(override.aes=list(shape=21, colour="black", fill="white")))+
+  labs(x="", y="")+
+  theme(legend.position = "bottom", legend.box = "vertical")+
+  coord_flip()
+lin_dot2 <- DotPlot(lin, features = feats, assay = "RNA", group.by = "celltype_aggr", cols = c("cadetblue1", "deeppink3")) +
+  geom_point(aes(size=pct.exp), shape = 21, colour="black", stroke=0.5) +
+  guides(size=guide_legend(override.aes=list(shape=21, colour="black", fill="white")))+
+  labs(x="", y="")+
+  theme(legend.position = "bottom", legend.box = "vertical")+
+  coord_flip()
+
+# plot for legends
+pdf(glue::glue("out/fig3_feature_and_dotplots_{paste(feats, collapse = '_')}_legend.pdf"), h = 5, w = 17)
+lake_dot2 | ald_dot2 | lin_dot2
+dev.off()
+ 
+# plot all (OLD)
+# pdf(glue::glue("out/fig2_featureplots_{paste(feats, collapse = '_')}.pdf"), h = 15, w = 10)
+# (lin_ct / lin_age / lin_fps + patchwork::plot_layout(heights = c(1,1,3))) |
+#   (ald_ct / ald_age / ald_fps + patchwork::plot_layout(heights = c(1,1,3))) |
+#   (lake_ct / lake_age / lake_fps + patchwork::plot_layout(heights = c(1,1,3)))
+# dev.off()
 
 # extra featureplots --------------------------------------------------------
 
