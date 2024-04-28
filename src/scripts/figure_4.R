@@ -13,7 +13,7 @@
 
 
 # Libraries ---------------------------------------------------------------
-# module load R/4.2.1
+# module load R/4.2.1_arrow
 # R
 .libPaths(c("src/envs/r_vz_deriv/renv/library/R-4.2/x86_64-pc-linux-gnu", .libPaths()))
 library(Seurat)
@@ -36,6 +36,11 @@ source("src/scripts/utils.R")
 #     RunUMAP(dims = 1:20, reduction = "pca", min.dist = 0.1, spread = 1.2) %>% 
 #     FindClusters(resolution = 2, verbose = T) # res = 1
 # qs::qsave(so, "out/cs20s.qs")
+
+# pdf('sandbox/feats_foxp2_cs20.pdf', h = 5, w = 25)
+# FeaturePlot(cs20, c("FOXP2", "CALB2", "SKOR2", "PRDM13", "MKI67"), raster = T, ncol = 5) & NoAxes() & NoLegend()
+# dev.off()
+
 so <- qs::qread("out/cs20s.qs")
 
 # convert to h5ad for scFates
@@ -548,17 +553,26 @@ pdf(glue::glue("{fs_out}/all_dimplots_{paste(feats, collapse = '_')}.pdf"), h = 
 print(fd5 | fd1 | fd2 | fd3 | fd4)
 dev.off()
 
+feats <- c("SKOR2", "MKI67", "FOXP2", "CALB1")
 # featureplots
-fp1 <- FeaturePlot(so, feats, reduction = "umap", raster = T, ncol = 1) & NoAxes() & NoLegend() & ggtitle(glue::glue("Aldinger et al. 2021"))
-fp2 <- FeaturePlot(lin, feats, reduction = "umap", raster = T, ncol = 1) & NoAxes() & NoLegend() & ggtitle("Braun et al. 2022")
-fp5 <- FeaturePlot(cs20, feats, reduction = "umap", raster = T, ncol = 1) & NoAxes() & NoLegend() & ggtitle("This study")
-fp3 <- FeaturePlot(mv, mmfeats, reduction = "umap", raster = T, ncol = 1) & NoAxes() & NoLegend() & ggtitle("Vladoiu et al. 2019")
-fp4 <- FeaturePlot(mm_lin, mmfeats, reduction = "umap", raster = T, ncol = 1) & NoAxes() & NoLegend() & ggtitle("La Manno et al. 2021")
+DefaultAssay(so) <- "SCT"
+fp1 <- FeaturePlot(so, feats, reduction = "umap", raster = T, ncol = 1) & NoAxes() & NoLegend()# & ggtitle(glue::glue("Aldinger et al. 2021"))
+fp2 <- FeaturePlot(lin, feats, reduction = "umap", raster = T, ncol = 1) & NoAxes() & NoLegend()# & ggtitle("Braun et al. 2022")
+fp5 <- FeaturePlot(cs20, feats, reduction = "umap", raster = T, ncol = 1) & NoAxes() & NoLegend()# & ggtitle("This study")
+fp6 <- FeaturePlot(lake, feats, reduction = "umap", raster = T, ncol = 1) & NoAxes() & NoLegend() #& ggtitle("Lake et al. 2017")
+fp7 <- FeaturePlot(sil, feats, reduction = "umap", raster = T, ncol = 1) & NoAxes() & NoLegend() #& ggtitle("Siletti et al. 2023")
+fp3 <- FeaturePlot(mv, mmfeats, reduction = "umap", raster = T, ncol = 1) & NoAxes() & NoLegend() #& ggtitle("Vladoiu et al. 2019")
+fp4 <- FeaturePlot(mm_lin, mmfeats, reduction = "umap", raster = T, ncol = 1) & NoAxes() & NoLegend()#& ggtitle("La Manno et al. 2021")
 
 # print
-pdf(glue::glue("{fs_out}/all_featureplots_{paste(feats, collapse = '_')}.pdf"), h = 10, w = 25)
-print(fp5 | fp1 | fp2 | fp3 | fp4)
+pdf(glue::glue("{fs_out}/all_featureplots_{paste(feats, collapse = '_')}.pdf"), h = 20, w = 25)
+print(fp5 | fp1 | fp2 | fp6 | fp7)
 dev.off()
+
+# vlnplots
+vp1 <- VlnPlot(so, feats, reduction = "umap", raster = T, ncol = 1) & NoAxes() & NoLegend()# & ggtitle(glue::glue("Aldinger et al. 2021"))
+vp2 <- VlnPlot(lin, feats, reduction = "umap", raster = T, ncol = 1) & NoAxes() & NoLegend()# & ggtitle("Braun et al. 2022")
+vp5 <- VlnPlot(cs20, feats, reduction = "umap", raster = T, ncol = 1) & NoAxes() & NoLegend()# & ggtitle("This study")
 
 # stacked barplot quantification
 bpdf <- purrr::map(c(so, lin, cs20, mv, mm_lin), \(x){

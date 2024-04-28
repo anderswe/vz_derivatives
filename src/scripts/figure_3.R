@@ -13,9 +13,8 @@
 
 
 # Libraries ---------------------------------------------------------------
-# module load R/4.2.1
+# conda activate ../G4MB/src/envs/r_general
 # R
-.libPaths(c("src/envs/r_vz_deriv/renv/library/R-4.2/x86_64-pc-linux-gnu", .libPaths()))
 library(Seurat)
 library(magrittr)
 library(ggplot2)
@@ -37,7 +36,7 @@ mypal <- RColorBrewer::brewer.pal(9, "RdBu")[c(1,5,9)]
 # from Aldinger et al. 2021 Nat NSc.
 # so <- readRDS("src/data/cbl_integrated_cleanCC_210111.rds")
 # on hpf:
-so <- readRDS(glue::glue("{yml$ald_path}/cbl_integrated_cleanCC_210111.rds"))
+so <- readRDS(glue::glue("{yml$ald_path}/cbl_integrated_cleanCC_210111.rds")) %>% Seurat::UpdateSeuratObject()
 
 # update metadata
 so@meta.data %<>% dplyr::mutate(celltype_aggr = dplyr::case_when(
@@ -269,37 +268,41 @@ lin_dot <- DotPlot(lin, features = feats, assay = "RNA", group.by = "celltype_ag
   theme(legend.position = "none")+
   coord_flip()
 
-
-
-
 # plot all
 pdf(glue::glue("out/fig3_feature_and_dotplots_{paste(feats, collapse = '_')}.pdf"), h = 10, w = 10)
 (((lin_ct / lin_age) | (ald_ct / ald_age) | (lake_ct / lake_age)) /
-  (lin_dot | ald_dot | lake_dot))+patchwork::plot_layout(heights = c(1, 0.5))
+  (lin_dot2 | ald_dot2 | lake_dot2))+patchwork::plot_layout(heights = c(1, 0.5))
 dev.off()
 
-lake_dot2 <- DotPlot(lake, features = feats, assay = "RNA", group.by = "celltype_pc_only", cols = c("cadetblue1", "deeppink3")) +
+# dotplots redone ---
+feats <- c("PAX2", "SST", "PVALB")
+DefaultAssay(lake) <- "SCT"
+DefaultAssay(so) <- "SCT"
+DefaultAssay(lin) <- "RNA" # SCT not available for this obj...too many cells.
+
+lake_dot2 <- DotPlot(lake, features = feats, group.by = "celltype_pc_only", cols = c("cadetblue1", "deeppink3")) +
   geom_point(aes(size=pct.exp), shape = 21, colour="black", stroke=0.5) +
   guides(size=guide_legend(override.aes=list(shape=21, colour="black", fill="white")))+
   labs(x="", y="")+
   theme(legend.position = "bottom", legend.box = "vertical")+
   coord_flip()
-ald_dot2 <- DotPlot(so, features = feats, assay = "RNA", group.by = "celltype_aggr", cols = c("cadetblue1", "deeppink3")) +
+ald_dot2 <- DotPlot(so, features = feats,  group.by = "celltype_aggr", cols = c("cadetblue1", "deeppink3")) +
   geom_point(aes(size=pct.exp), shape = 21, colour="black", stroke=0.5) +
   guides(size=guide_legend(override.aes=list(shape=21, colour="black", fill="white")))+
   labs(x="", y="")+
   theme(legend.position = "bottom", legend.box = "vertical")+
   coord_flip()
-lin_dot2 <- DotPlot(lin, features = feats, assay = "RNA", group.by = "celltype_aggr", cols = c("cadetblue1", "deeppink3")) +
+lin_dot2 <- DotPlot(lin, features = feats, group.by = "celltype_aggr", cols = c("cadetblue1", "deeppink3")) +
   geom_point(aes(size=pct.exp), shape = 21, colour="black", stroke=0.5) +
   guides(size=guide_legend(override.aes=list(shape=21, colour="black", fill="white")))+
   labs(x="", y="")+
   theme(legend.position = "bottom", legend.box = "vertical")+
   coord_flip()
 
+
 # plot for legends
-pdf(glue::glue("out/fig3_feature_and_dotplots_{paste(feats, collapse = '_')}_legend.pdf"), h = 5, w = 17)
-lake_dot2 | ald_dot2 | lin_dot2
+pdf(glue::glue("out/fig3_feature_and_dotplots_{paste(feats, collapse = '_')}_legend_sct.pdf"), h = 3.33, w = 15)
+lin_dot2 | ald_dot2 | lake_dot2
 dev.off()
  
 # plot all (OLD)
@@ -308,6 +311,7 @@ dev.off()
 #   (ald_ct / ald_age / ald_fps + patchwork::plot_layout(heights = c(1,1,3))) |
 #   (lake_ct / lake_age / lake_fps + patchwork::plot_layout(heights = c(1,1,3)))
 # dev.off()
+
 
 # extra featureplots --------------------------------------------------------
 

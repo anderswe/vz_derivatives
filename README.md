@@ -14,4 +14,4 @@ This project is licensed under the MIT license. Please see the LICENSE file in t
 Massive thanks to the donors, and to the teams at the Taylor and Millen labs.
 
 ## Contact
-Questions? Comments? You can DM me here on GitHub or at: anders dot erickson at mail dot utoronto dot ca.
+Questions? Comments? You can email me at: anders dot erickson at mail dot utoronto dot ca.
