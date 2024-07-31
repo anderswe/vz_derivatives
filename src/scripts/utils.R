@@ -29,7 +29,7 @@ genes <- c("PTF1A", "PRDM13", "PAX2", "LHX5", "LHX9",
                 "TTYH1", "SOX5", "NOTCH1", "PRDM5", "PVT1", "PARD3B", "PIEZO2", "KIRREL2", "ZIC5", "HES3", "MIR9-3HG", "ZIC4",
                 "WNT3A", "SOX9", "VIM", 'PDGFRA', 'PECAM1', 'COL1A1', 'CD19', 'MS4A1', "SOX10", "PAX7", "SNAI1", "NEUROG1", "NEUROG2", 
                 "NEUROG3", "EBF1", "EBF2", "EN2", "SHROOM3", "CNPY1", "IRF2BPL", "HES1", "ZIC1", "ZIC3", 
-                "PVALB") %>% unique() %>% sort()
+                "PVALB", "FOXP1", "FOXP2") %>% unique() %>% sort()
 
 
 # Functions ---------------------------------------------------------------

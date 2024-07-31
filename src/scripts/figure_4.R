@@ -169,6 +169,7 @@ so@meta.data %<>% dplyr::mutate(celltype_broad = dplyr::case_when(
 ))
 
 qs::qsave(so, "out/cs20s_annot.qs")
+so <- qs::qread("out/cs20s_annot.qs")
 
 dp_annot_broad <- DimPlot(so, group.by = "celltype_broad", cols = tableau10) + NoAxes() + ggtitle("") + NoLegend() #label = T, repel = T, label.size = 3
 dp_annot_broad2 <- DimPlot(so, group.by = "celltype_broad", cols = tableau10, label = T, repel = T, label.size = 3) + NoAxes() + ggtitle("") + NoLegend()
