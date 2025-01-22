@@ -328,7 +328,7 @@ qs::qsave(list("counts" = exprs(target_dat),
 
 counts <- qs::qread(glue::glue("{counts_outdir}/geomx_counts.qs"))
 target_dat <- qs::qread(glue::glue("{counts_outdir}/geomx_target_dat.qs"))
-
+pData(target_dat) %>% tibble::rownames_to_column("dcc_name") %>% dplyr::select(-LOQ) %>% readr::write_csv(glue::glue("{counts_outdir}/metadata_for_geomx_counts.csv"))
 
 
 # Heatmap CS medial ------------------------------------------------------------------
@@ -447,7 +447,7 @@ sss <- target_dat %>% subset(select = sss_selects)
 # need to pick top var
 sss_goi <- assayDataApply(sss, elt = "log_q", MARGIN = 1, calc_CV) %>%
   tibble::enframe() %>%
-  dplyr::slice_max(value, n = 250) %>%
+  dplyr::slice_max(value, n = 500) %>%
   dplyr::pull(name)
 
 # or top expressed
@@ -590,12 +590,12 @@ sss_hm <- ComplexHeatmap::Heatmap(as.matrix(sss_mat),
                                                              title_position = "leftcenter-rot")) #leftcenter-rot
 
 
-pdf(glue::glue("{outdir}/cs_medial_heatmap_aggr_split_isvz.pdf"), w = 4, h = 8)
+pdf(glue::glue("{outdir}/cs_medial_heatmap_aggr_split_isvz_top500.pdf"), w = 4, h = 8)
 sss_hm %<>% ComplexHeatmap::draw(merge_legend = TRUE, heatmap_legend_side = "right", annotation_legend_side = "right")
 dev.off()
 
 
-sss_goi[ComplexHeatmap::row_order(sss_hm)] %>% 
+sss_goi[ComplexHeatmap::row_order(sss_hm) %>% unlist()] %>% 
   as.data.frame() %>% 
   writexl::write_xlsx(glue::glue("{outdir}/geomx_heatmap_lumped_gene_order.xlsx"))
 

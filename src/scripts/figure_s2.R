@@ -79,3 +79,73 @@ dev.off()
 # made in src/scripts/figure_4.R
 
 
+# Bonus for revisions 2024-10-28 -----------------------------------------
+
+# import hallmark apoptosis gene sets
+read_hallmark <- function(x){
+    x %>% 
+        readr::read_tsv() %>% 
+        dplyr::filter(STANDARD_NAME == "GENE_SYMBOLS") %>% 
+        dplyr::pull(HALLMARK_APOPTOSIS) %>% 
+        stringr::str_split(",") %>% 
+        unlist() %>% 
+        return()
+}
+
+apop_hs <- read_hallmark("src/metadata/HALLMARK_APOPTOSIS.v2024.1.Hs.tsv")
+apop_mm <- read_hallmark("src/metadata/HALLMARK_APOPTOSIS.v2024.1.Mm.tsv")
+
+# re-import integrated human dataset
+int <- qs::qread(glue::glue("out/integration/pc/final_object/integrated.qs"))
+
+# apply module scores
+int %<>% AddModuleScore(list(apop_hs), name = "hallmark_apoptosis")
+mv %<>% AddModuleScore(list(apop_mm), name = "hallmark_apoptosis")
+mm_lin %<>% AddModuleScore(list(apop_mm), name = "hallmark_apoptosis")
+ald %<>% AddModuleScore(list(apop_hs), name = "hallmark_apoptosis")
+br %<>% AddModuleScore(list(apop_hs), name = "hallmark_apoptosis")
+cs20 %<>% AddModuleScore(list(apop_hs), name = "hallmark_apoptosis")
+lake %<>% AddModuleScore(list(apop_hs), name = "hallmark_apoptosis")
+sil %<>% AddModuleScore(list(apop_hs), name = "hallmark_apoptosis")
+
+# clean int object
+int$study_id <- int$sample_id %>% stringr::str_replace('ts', 'this study') %>% snakecase::to_sentence_case()
+
+# plot on int object
+int1 <- FeaturePlot(int, "hallmark_apoptosis1", raster = T) & NoAxes() & NoLegend() & ggtitle("Apoptosis Score (Hallmark)")
+int2 <- DimPlot(int, group.by = "celltype_factor", raster = T, label = T, cols = tableau10) & NoAxes() & NoLegend() & ggtitle("")
+
+pdf("sandbox/apop.pdf", w = 12, h = 6)
+int1 | int2
+dev.off()
+
+# plot int violins
+subset_vln <- function(y, z){
+    celltype_lvls <- c("NE", "PC 1", "PC 2", "PC 3", "PC 4", "PIP 1", "PIP 2", "IN 1", "IN 2", "IN 3")
+    ct_vln_pal <- tableau10 %>% magrittr::set_names(celltype_lvls)
+    y %>% 
+        subset(subset = study_id == z) %>% 
+        VlnPlot("hallmark_apoptosis1", group.by = "celltype_factor", pt.size = 0, cols = ct_vln_pal) & 
+        NoLegend() & 
+        theme(axis.title.x = element_blank(), axis.text.x = element_text(angle = 0, hjust = 0.5, vjust = 0.5)) & 
+        ggtitle(z) & 
+        ylab("Apoptosis Score (Hallmark)")
+}
+
+plot_list <- purrr::map(unique(int$study_id), ~subset_vln(int, .x))
+
+pdf("sandbox/apop_vln.pdf", w = 6, h = length(unique(int$sample_id)) * 3)
+cowplot::plot_grid(plotlist = plot_list, ncol = 1)
+dev.off()
+
+
+pdf("sandbox/apop_vln_mv.pdf", w = 15, h = 6)
+VlnPlot(mv, "hallmark_apoptosis1", group.by = "Orig_ann", pt.size = 0) & 
+        NoLegend() & 
+        theme(axis.title.x = element_blank(), axis.text.x = element_text(angle = 60, hjust = 1, vjust = 1)) & 
+        ylab("Apoptosis Score (Hallmark)")&
+        ggtitle("")
+dev.off()
+
+
+

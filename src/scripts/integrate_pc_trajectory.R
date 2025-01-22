@@ -304,7 +304,7 @@ qs::qsave(sss, glue::glue("{outdir}/sss.qs"))
 sss <- qs::qread(glue::glue("{outdir}/sss.qs"))
 
 
-
+# age dict for annotation
 mannens_age_dict <- sss@meta.data %>% 
     tibble::rownames_to_column("barcode") %>% 
     dplyr::filter(sample_id == "mannens") %>% 
@@ -380,28 +380,9 @@ dir.create(glue::glue("{outdir}/final_object"), showWarnings = FALSE, recursive 
 qs::qsave(sss, glue::glue("{outdir}/final_object/integrated.qs"))
 sss <- qs::qread(glue::glue("{outdir}/final_object/integrated.qs"))
 
-# lemma
-# study- and sample-
-head(sss@meta.data)
-names(sss@meta.data)
-sss$study_id <- sss$sample_id %>% stringr::str_replace('ts', 'this study') %>% snakecase::to_sentence_case()
-table(sss$study_id, useNA = 'always')
-system('clear')
-
-table(sss$donor_id, useNA = 'always')
-table(sss$batch, useNA = 'always')
-table(sss$Fetus_id, useNA = 'always')
-table(sss$experiment, useNA = 'always')
-table(sss$sample, useNA = 'always')
-
-table(sss$sample_id_final, useNA = 'always')
-
-
-# end lemma
-
 # features
 DefaultAssay(sss) <- "RNA"
-bonus_genes <- c("HES5", "KIRREL2", "MKI67", "NOTCH1", "PIEZO2", "SHROOM3", "SOX2", "TCF7L1", "TCF7L2", "VIM", "LHX1", "PDRM13", "PTF1A", "CALB1", "EBF1", "EBF2", "ESRRB", "FOXP1", "FOXP2", "PCP4" , "SKOR2", "GRIK3", "KCNA2", "NXPH1", "PAX2", "PVALB", "SLC6A5", "SORCS3", 'GRIK3', 'NXPH1', 'SLC6A5', 'ALDH1A3', 'LGI2', 'GJD2', 'SORCS3', "KCNA2") %>% unique()
+bonus_genes <- c("FOXP2", "FOXP1", "FOXP4", "ALDOC", "PAX6", "POU3F1", "LMO1", "PAX5", "ZFHX3", "OLIG2", "LMO3", "ROBO3", "HRK", "LMO4", "SST", "TESC", "HOPX", "ASCL1", "FOXO1", "HES5", "KIRREL2", "MKI67", "NOTCH1", "PIEZO2", "SHROOM3", "SOX2", "TCF7L1", "TCF7L2", "VIM", "LHX1", "PRDM13", "PTF1A", "CALB1", "EBF1", "EBF2", "ESRRB", "FOXP1", "FOXP2", "PCP4" , "SKOR2", "GRIK3", "KCNA2", "NXPH1", "PAX2", "PVALB", "SLC6A5", "SORCS3", 'GRIK3', 'NXPH1', 'SLC6A5', 'ALDH1A3', 'LGI2', 'GJD2', 'SORCS3', "KCNA2") %>% unique()
 to_plot <- sort(unique(c(genes, bonus_genes)))
 pdf(glue::glue("{outdir}/final_object/featureplots.pdf"), width = 25, height = 5 * ceiling(length(to_plot) / 5))
 FeaturePlot(sss, to_plot, raster = T, ncol = 5) & NoAxes() & NoLegend()
@@ -466,16 +447,9 @@ pdf(glue::glue("{outdir}/final_object/slingshot.pdf"), width = 12, height = 5)
 p1 | p2
 dev.off()
 
-# save
-# DO NOT USE
-# ggdf %>% data.table::fwrite(glue::glue("{outdir}/final_object/sling_coords.csv"))
-
-# notes:
-# interneuron trajectories p much useless
-# one trajectory for PC is sensible, though
 
 
-# PC pseuodtime trajectory ---------------------------------------------------------------
+# PC pseudotime trajectory ---------------------------------------------------------------
 
 DefaultAssay(sss) <- "integrated"
 pc <- sss %>% 
@@ -573,7 +547,7 @@ pdf(glue::glue("{outdir}/pc_traj_featureplots.pdf"), width = 25, height = 75)
 FeaturePlot(pc, pc_genes, raster = T, ncol = 5) & NoAxes() & NoLegend()
 dev.off()
 
-bonus_genes <- c("HES5", "KIRREL2", "MKI67", "NOTCH1", "PIEZO2", "SHROOM3", "SOX2", "TCF7L1", "TCF7L2", "VIM", "LHX1", "PDRM13", "PTF1A", "CALB1", "EBF1", "EBF2", "ESRRB", "FOXP1", "FOXP2", "PCP4" , "SKOR2", "GRIK3", "KCNA2", "NXPH1", "PAX2", "PVALB", "SLC6A5", "SORCS3", 'GRIK3', 'NXPH1', 'SLC6A5', 'ALDH1A3', 'LGI2', 'GJD2', 'SORCS3', "KCNA2",
+bonus_genes <- c("HES5", "KIRREL2", "MKI67", "NOTCH1", "PIEZO2", "SHROOM3", "SOX2", "TCF7L1", "TCF7L2", "VIM", "LHX1", "PRDM13", "PTF1A", "CALB1", "EBF1", "EBF2", "ESRRB", "FOXP1", "FOXP2", "PCP4" , "SKOR2", "GRIK3", "KCNA2", "NXPH1", "PAX2", "PVALB", "SLC6A5", "SORCS3", 'GRIK3', 'NXPH1', 'SLC6A5', 'ALDH1A3', 'LGI2', 'GJD2', 'SORCS3', "KCNA2",
 "SRGAP2C", "SYNGAP1", "GATA3", "SLC1A6", "ALDOC", "PLCB4", "PLCB3", "TRPC3", "GRM1", "ITPR1", "PRKCD", "SCN1A", "SCN2A", "SCN3A", "SCN8A", "CACNA1S", "CACNA1C", "CACNA1D", "CACNA1B", "CACNA1E") %>% unique()
 
 to_plot <- sort(unique(c(genes, bonus_genes)))
@@ -652,6 +626,11 @@ inn <- sss %>%
 # quick save
 qs::qsave(inn, glue::glue("{outdir}/inn.qs"))
 inn <- qs::qread(glue::glue("{outdir}/inn.qs"))
+
+# markers
+Idents(inn) <- inn$celltype_factor
+in_mks <- FindAllMarkers(inn, only.pos = TRUE) %>% dplyr::mutate(unique = pct.1 - pct.2)
+in_mks %>% readr::write_csv(glue::glue("{outdir}/inn_markers.csv"))
 
 # palettes
 lvls <- c("6 PCW", "7 PCW", "8 PCW", "9 PCW", "10 PCW", "11 PCW", "12 PCW", "13 PCW", "14 PCW", "15 PCW", "16 PCW", "17 PCW", "18 PCW", "20 PCW", "21 PCW", "38 PCW", "6 mths", "7 mths", "9 mths", "3 yrs", "29 yrs", "42 yrs", "44 yrs", "46 yrs", "50 yrs", "52 yrs")

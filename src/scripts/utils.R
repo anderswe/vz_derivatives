@@ -14,6 +14,7 @@ fave_pal <- c("#FB6467FF", "grey", "#197EC0FF")
 phase_pal <- c("#2B83BA", "#FDAE61", "#D7191C")
 tableau10 <- c("#4E79A7", "#F28E2B", "#E15759", "#76B7B2", "#59A14F", "#EDC948", "#B07AA1", "#FF9DA7", "#9C755F", "#BAB0AC") # from {ggthemes}
 tableau20 <- c('#4E79A7', '#A0CBE8', '#F28E2B', '#FFBE7D', '#59A14F', '#8CD17D', '#B6992D', '#F1CE63', '#499894', '#86BCB6', '#E15759', '#FF9D9A', '#79706E', '#BAB0AC', '#D37295', '#FABFD2', '#B07AA1', '#D4A6C8', '#9D7660', '#D7B5A6')
+biorender_pal <- c("#2e667b", "#bb4462", "#dbf3f3", "#eb8da4", "#8baebc", "#6494a4", "#949494", "#acd4dc", "#f8d7dd", "#f4bcc4")
 
 # Gene list ---------------------------------------------------------------
 genes <- c("PTF1A", "PRDM13", "PAX2", "LHX5", "LHX9",
@@ -49,3 +50,40 @@ fp <- function(so, label, dir = "tmp", reduction = "wnn.umap.recip"){
   print(cowplot::plot_grid(plotlist = plot_list, ncol = 6))
   dev.off()
 }
+
+volcano_1v1 <- function(mks, padj_thresh = 0.05, lfc_thresh = 1, label1, label2){
+  # mks = data.frame output from FindMarkers(so, ident.1 = "X", ident.2 = "Y")
+  # padj_thresh = numeric p adjusted threshold, just for colouring the points
+  # lfc_thresh = numeric log fold change threshold, just for colouring the points
+  # label1 = character describing first group i.e. ident.1 in FindMarkers
+  # label1 = character describing second group i.e. ident.2 in FindMarkers
+  
+  # test
+  # padj_thresh <- 0.05
+  # lfc_thresh <- 1
+  # label1 <- "emb_rl_and_cp"
+  # label2 <- "rl_vz"
+  
+  return(mks %>% 
+           dplyr::mutate(gene = rownames(.)) %>% 
+           dplyr::filter(p_val_adj != 1 & !grepl("^ENSG", gene)) %>% 
+           dplyr::mutate(color = dplyr::case_when(
+             p_val_adj > padj_thresh | abs(avg_log2FC) < lfc_thresh ~ "insig",
+             avg_log2FC > lfc_thresh ~ label1,
+             avg_log2FC < -lfc_thresh ~ label2),
+             label = ifelse(color != "insig", gene, NA)) %>% 
+           ggplot(aes(avg_log2FC, -log10(p_val_adj), color = color, label = label))+
+           geom_point(size = 3)+
+           theme_classic()+
+           scale_color_manual(breaks = c(label1, label2), values = c(fave_pal[c(3,1)], "lightgrey"), na.value="lightgrey")+
+           ggrepel::geom_text_repel(size = 3, segment.size = 0.1, 
+                                    box.padding = 0.4, color = "black", 
+                                    segment.color = "black", min.segment.length = 0, 
+                                    max.overlaps = Inf)+
+           labs(x = bquote(~log[2]~FC), y = bquote(~-log[10]~p[adj]), color = "")+
+           guides(colour = guide_legend(override.aes = list(size=3))))
+  
+  
+}
+
+

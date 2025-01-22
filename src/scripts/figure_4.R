@@ -81,17 +81,22 @@ so@meta.data %<>% dplyr::mutate(celltype_fine = dplyr::case_when(
   seurat_clusters %in% c(4,3,12,33,0,9) ~ "PC (ESRRB+)", # ESRRB+
   seurat_clusters %in% c(2,6) ~ "PC (PCP4+)", # PCP4+ 25???
   seurat_clusters %in% c(25) ~ "PC (GRIN2A+)", # GRIN2A+
-  seurat_clusters %in% c(8,24,27,29) ~ "GABA NTZ (SOX14+)", # SOX14+
-  seurat_clusters %in% c(26,21) ~ "RL", # LMX1A+, ATOH1+
-  seurat_clusters %in% c(20,11,1,10,28,18,31) ~ "Glut. NTZ", # LHX9+, PAX5+
-) %>% factor(levels = rev(c("NE", "VZ (Prolif.)", "PC (PRDM13+)", "PC (SKOR2+)", "PC (ESRRB+)", "PC (PCP4+)", "PC (GRIN2A+)", "GABA NTZ (SOX14+)", "RL", "Glut. NTZ"))))
+  seurat_clusters %in% c(8,24,27,29) ~ "GABA CN (SOX14+)", # SOX14+
+  seurat_clusters %in% c(26) ~ "RL (LMX1A+)", 
+  seurat_clusters %in% c(21) ~ "RL deriv. (ATOH1+)",
+  seurat_clusters %in% c(20,11,1,10,28,18,31) ~ "Gluta. CN", # LHX9+, PAX5+
+) %>% factor(levels = rev(c("NE", "VZ (Prolif.)", "PC (PRDM13+)", "PC (SKOR2+)", "PC (ESRRB+)", "PC (PCP4+)", "PC (GRIN2A+)", "GABA CN (SOX14+)", "RL (LMX1A+)", "RL deriv. (ATOH1+)", "Gluta. CN"))))
 
 set.seed(667)
-ct_pal <- sample(tableau20, length(unique(so$celltype_fine))) %>% magrittr::set_names(levels(so$celltype_fine) %>% rev()) # #79706E, #8CD17D, #D4A6C8, #499894, #FABFD2, #B07AA1, #86BCB6, #D37295, #A0CBE8, #D7B5A6
+ct_pal_new <- tableau20[c(11,2,8,3,14,12,10,19,1,17,5)] %>% magrittr::set_names(levels(so$celltype_fine))
 
-dp_annot <- DimPlot(so, group.by = "celltype_fine", cols = ct_pal) + NoAxes() + ggtitle("") + NoLegend() #label = T, repel = T, label.size = 3
-pdf("out/annotation_dimplots_cs20s.pdf", h = 4, w = 12)
+dp_annot <- DimPlot(so, group.by = "celltype_fine", cols = ct_pal_new) + NoAxes() + ggtitle("") + NoLegend() #label = T, repel = T, label.size = 3
+pdf("out/annotation_dimplots_cs20s_recolor.pdf", h = 4, w = 10)
 dp_annot | dp3 | dp4
+dev.off()
+
+pdf("out/annotation_dimplots_cs20s_recolor_fine_annotation_only.pdf", h = 4, w = 4)
+dp_annot
 dev.off()
 
 # PC subset
@@ -160,19 +165,22 @@ dev.off()
 mks <- qs::qread("out/mks_cs20s.qs")
 
 so@meta.data %<>% dplyr::mutate(celltype_broad = dplyr::case_when(
-  grepl("RL", celltype_fine) ~ "RL",
-  grepl("Glut", celltype_fine) ~ "Glut. NTZ",
-  grepl("GABA", celltype_fine) ~ "GABA NTZ",
+  grepl("LMX1A", celltype_fine) ~ "RL (LMX1A+)",
+  grepl("ATOH", celltype_fine) ~ "RL deriv. (ATOH1+)",
+  grepl("Glut", celltype_fine) ~ "Gluta. CN",
+  grepl("GABA", celltype_fine) ~ "GABA CN",
   grepl("ESRRB|PCP|GRIN", celltype_fine) ~ "Late PC",
   grepl("SKOR2|PRDM13", celltype_fine) ~ "Early PC",
-  grepl("VZ|NE", celltype_fine) ~ "NE & VZ",
+  grepl("VZ", celltype_fine) ~ "VZ",
+  grepl("NE", celltype_fine) ~ "NE",
 ))
 
 qs::qsave(so, "out/cs20s_annot.qs")
 so <- qs::qread("out/cs20s_annot.qs")
 
-dp_annot_broad <- DimPlot(so, group.by = "celltype_broad", cols = tableau10) + NoAxes() + ggtitle("") + NoLegend() #label = T, repel = T, label.size = 3
-dp_annot_broad2 <- DimPlot(so, group.by = "celltype_broad", cols = tableau10, label = T, repel = T, label.size = 3) + NoAxes() + ggtitle("") + NoLegend()
+ct_broad_pal <- c(tableau10[c(3,2,4,1,5,7)], tableau20[2], tableau10[6]) %>% magrittr::set_names(unique(so$celltype_broad))
+dp_annot_broad <- DimPlot(so, group.by = "celltype_broad", cols = ct_broad_pal) + NoAxes() + ggtitle("") + NoLegend() #label = T, repel = T, label.size = 3
+dp_annot_broad2 <- DimPlot(so, group.by = "celltype_broad", cols = ct_broad_pal, label = T, repel = T, label.size = 3) + NoAxes() + ggtitle("") + NoLegend()
 bp_annot_broad <- so@meta.data %>% 
   dplyr::select(celltype_broad, orig.ident) %>% 
   table() %>% 
@@ -181,11 +189,81 @@ bp_annot_broad <- so@meta.data %>%
   ggplot(aes(fill=ct, y=freq, x=age)) + 
     geom_bar(position="fill", stat="identity", color = "black")+
     theme_classic()+
-    scale_fill_manual(values = tableau10)+
+    scale_fill_manual(values = ct_broad_pal)+
     labs(y = "Proportion", x = "", fill = "")
 pdf("out/annotation_dimplots_broad_cs20s.pdf", h = 8, w = 8)
 (dp_annot_broad | dp_annot_broad2) / (bp_annot_broad + patchwork::plot_spacer() + patchwork::plot_layout(widths = c(1,2)))
 dev.off()
+
+# quick features
+pdf("out/lmx1a_cs20s.pdf", h = 4, w = 4)
+FeaturePlot(so, "LMX1A") & NoAxes()
+dev.off()
+
+
+# NE markers
+Idents(so) <- so$celltype_fine
+nemks <- FindMarkers(so, ident.1 = "NE") %>% dplyr::mutate(gene = rownames(.))
+qs::qsave(nemks, glue::glue("out/ne_markers.qs"))
+nemks <- qs::qread("out/ne_markers.qs")
+
+so@meta.data %<>% dplyr::mutate(celltype_fine2 = dplyr::case_when(
+    celltype_fine == "NE" ~ "NE",
+    celltype_fine %in% c("VZ (Prolif.)", "RL") ~ "VZ & RL",
+    TRUE ~ "Other"
+))
+
+Idents(so) <- so$celltype_fine2
+nemks3 <- FindMarkers(so, ident.1 = "NE", ident.2 = "VZ & RL") %>% dplyr::mutate(gene = rownames(.))
+
+
+do_volcano <- function(markers, lfc_thresh = 0.5, padj_thresh = 1e-75, label1 = "label1", label2 = "label2", goi = NULL){
+  markers %>% 
+    dplyr::filter(p_val_adj != 1 & !grepl("^ENSG", gene)) %>% 
+    dplyr::mutate(color = dplyr::case_when(
+      p_val_adj > padj_thresh | abs(avg_log2FC) < lfc_thresh ~ "insig",
+      avg_log2FC > lfc_thresh ~ label1,
+      avg_log2FC < -lfc_thresh ~ label2)) %>% 
+    { if(!is.null(goi)) dplyr::mutate(., label = ifelse(gene %in% goi, gene, NA)) else dplyr::mutate(., label = ifelse(color != "insig", gene, NA)) } %>% 
+    dplyr::mutate(neg_log_padj = -log10(p_val_adj) %>% ifelse(. == Inf, 305, .)) %>% # assign Inf to 305
+    ggplot(aes(avg_log2FC, neg_log_padj, color = color, label = label))+
+    geom_point(size = 3)+
+    theme_classic()+
+    scale_color_manual(breaks = c(label1, label2), values = c(fave_pal[c(3,1)], "lightgrey"), na.value="lightgrey", name = "")+
+    ggrepel::geom_text_repel(size = 3, segment.size = 0.1, 
+                             box.padding = 1, color = "black", 
+                             segment.color = "black", min.segment.length = 0, 
+                             max.overlaps = Inf)+
+    labs(x = bquote(~log[2]~FC), y = bquote(~-log[10]~p[adj]), color = "")+
+    guides(colour = guide_legend(override.aes = list(size=3)))
+}
+
+pdf("out/volcano_ne_vs_rl&vz_condensed.pdf", w = 4, h = 3)
+do_volcano(nemks3, goi = c("PTPRZ1", "ZIC1", "ERBB4", "ATXN1", "WNT7B", "DCC", "NFIA", "LRP2"), label1 = "NE", label2 = "VZ & RL")
+dev.off()
+
+pdf("out/volcano_ne_vs_rl&vz_expanded.pdf", w = 10, h = 9)
+do_volcano(nemks3, label1 = "NE", label2 = "VZ & RL")
+dev.off()
+
+pdf("out/volcano_ne_vs_all_condensed.pdf", w = 4, h = 3)
+do_volcano(nemks, goi = c("WNT7B", "SHROOM", "PTPRZ1", "SMOC1", "LRP2", "CTNNA2", "EBF1", "EBF3", "LHX1", "LRP2"), label1 = "NE", label2 = "Other")
+dev.off()
+
+pdf("out/volcano_ne_vs_all_expanded.pdf", w = 20, h = 18)
+do_volcano(nemks, label1 = "NE", label2 = "Other")
+dev.off()
+
+
+
+
+# ISH marker plots
+pdf("out/ne_mks.pdf", w = 10, h = 4)
+FeaturePlot(so, c("LRP2", "SMOC2", "WNT7B"), raster = T, order = T, ncol = 3) & NoAxes() & NoLegend()
+dev.off()
+
+
+
 
 
 # panel B (dotplot) --------------------------------------------------
@@ -268,7 +346,8 @@ wmp <- apply(ss@assays$SCT@data[gaba_genes,], 1, function(x){
     return(wex)}) %>% sort()
 
 # get mean expression by bin
-xp_df <- ss@assays$SCT[gaba_genes, ] %>% 
+xp_df <- ss@assays$SCT[gaba_genes, ] %>%
+  as.matrix() %>% 
   t() %>% 
   tibble::as_tibble(rownames = "sample_barcode") %>% 
   dplyr::mutate(pt_bin = plyr::mapvalues(sample_barcode, rownames(ss@meta.data), ss@meta.data$pt_bin)) %>% 
@@ -283,7 +362,7 @@ xp_df <- ss@assays$SCT[gaba_genes, ] %>%
 # density plot
 dens <- ggplot(ss@meta.data, aes(x = pt, fill = celltype_fine), colour = "black")+
   geom_density(alpha = 0.8, adjust = 3)+
-  scale_fill_manual(values = ct_pal)+
+  scale_fill_manual(values = ct_pal_new)+
   theme_void()+
   theme(legend.position = "none")+
   labs(x = "", y = "")
@@ -299,7 +378,7 @@ h <- ggplot(xp_df, aes(x = as.numeric(pt_bin), y = gene, fill = scaled_mean_sct)
         legend.key.size = unit(5, "pt"))+
   labs(x = "", y = "", fill = "Scaled\nmean\nSCT")
 
-pdf("out/heatmap.pdf", h = 4, w = 3)
+pdf("out/heatmap_recolor.pdf", h = 4, w = 3)
 dens / h + patchwork::plot_layout(heights = c(1,4))
 dev.off()
 
