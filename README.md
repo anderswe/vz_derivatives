@@ -1,6 +1,6 @@
-# Cerebellar VZ Derivatives
+# Mapping the developmental profile of ventricular zone–derived neurons in the human cerebellum
 
-This repo is for sharing code used in preparation of the Cerebellar VZ Derivatives paper.
+This repo is for sharing code used in preparation of the Cerebellar VZ Derivatives paper, available at DOI: [10.1073/pnas.2415425122](https://www.pnas.org/doi/10.1073/pnas.2415425122).
 
 <img src="img/cartoon_1a.png" alt="Cartoon" width="200"/>
 
